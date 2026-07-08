@@ -1,5 +1,7 @@
+using Backend.Services;
 using Backend.Data;
 using Microsoft.EntityFrameworkCore;
+
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -17,6 +19,8 @@ builder.Services.AddCors(options =>
 });
 
 builder.Services.AddControllers();
+// Registra a nossa Camada de Serviços (Injeção de Dependência)
+builder.Services.AddScoped<ITransacaoService, TransacaoService>();
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();

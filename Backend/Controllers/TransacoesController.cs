@@ -1,47 +1,57 @@
-using Backend.Data;
+using Backend.DTOs;
 using Backend.Models;
+using Backend.Services;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 
 namespace Backend.Controllers;
 
+/// <summary>
+/// Gerencia as operações de criação e listagem de transações.
+/// </summary>
 [ApiController]
 [Route("api/[controller]")]
 public class TransacoesController : ControllerBase
 {
-    private readonly AppDbContext _context;
+    private readonly ITransacaoService _transacaoService;
 
-    public TransacoesController(AppDbContext context)
+    // Injeção de dependência do serviço
+    public TransacoesController(ITransacaoService transacaoService)
     {
-        _context = context;
+        _transacaoService = transacaoService;
     }
 
+    /// <summary>
+    /// Lista todas as transações cadastradas.
+    /// </summary>
     [HttpGet]
     public async Task<IActionResult> Get()
     {
-        var transacoes = await _context.Transacoes.Include(t => t.Pessoa).ToListAsync();
+        var transacoes = await _transacaoService.ObterTodasAsync();
         return Ok(transacoes);
     }
 
+    /// <summary>
+    /// Registra uma nova transação aplicando as regras de negócio.
+    /// </summary>
     [HttpPost]
-    public async Task<IActionResult> Post([FromBody] Transacao transacao)
+    public async Task<IActionResult> Post([FromBody] TransacaoCreateDto dto)
     {
-        // Regra: Verifica se a pessoa informada realmente existe
-        var pessoa = await _context.Pessoas.FindAsync(transacao.PessoaId);
-        if (pessoa == null)
+        try
         {
-            return BadRequest("Pessoa não encontrada no sistema.");
+            var transacao = await _transacaoService.CriarAsync(dto);
+            
+            // Retorna 201 Created informando que o recurso foi criado com sucesso
+            return Created("", transacao); 
         }
-
-        // Regra: Menores de idade (menor de 18 anos) apenas despesas podem ser cadastradas
-        if (pessoa.Idade < 18 && transacao.Tipo == TipoTransacao.Receita)
+        catch (ArgumentException ex)
         {
-            return BadRequest("Menores de 18 anos só podem cadastrar despesas.");
+            // Captura o erro de "Pessoa não existe"
+            return BadRequest(new { message = ex.Message });
         }
-
-        _context.Transacoes.Add(transacao);
-        await _context.SaveChangesAsync();
-        
-        return Ok(transacao);
+        catch (InvalidOperationException ex)
+        {
+            // Captura o erro de "Menor de idade com receita"
+            return BadRequest(new { message = ex.Message });
+        }
     }
 }
