@@ -1,6 +1,7 @@
 using Backend.Data;
 using Microsoft.EntityFrameworkCore;
 
+builder.Services.AddControllers();
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddDbContext<AppDbContext>(options =>
@@ -33,5 +34,6 @@ app.UseHttpsRedirection();
 
 app.UseCors("AllowReactApp");
 
+app.MapControllers();
 
 app.Run();
