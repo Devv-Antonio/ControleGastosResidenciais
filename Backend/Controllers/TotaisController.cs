@@ -6,9 +6,6 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Backend.Controllers;
 
-/// <summary>
-/// Responsável por gerar o relatório de totais e saldos para o Dashboard.
-/// </summary>
 [ApiController]
 [Route("api/[controller]")]
 public class TotaisController : ControllerBase
@@ -20,58 +17,48 @@ public class TotaisController : ControllerBase
         _context = context;
     }
 
-    /// <summary>
-    /// Calcula e retorna os totais utilizando GroupBy no SQL para máxima performance.
-    /// </summary>
     [HttpGet]
     public async Task<IActionResult> Get()
     {
-        // 1. Busca apenas os IDs e Nomes das pessoas (super leve, sem carregar transações)
+        // 1. Busca as pessoas ordenadas
         var pessoas = await _context.Pessoas
             .AsNoTracking()
-            .Select(p => new { p.Id, p.Nome })
             .OrderBy(p => p.Nome)
             .ToListAsync();
 
-        // 2. Faz o GroupBy DIRETO NO BANCO DE DADOS (Exatamente como o avaliador pediu)
-        // O banco faz a matemática pesada e devolve apenas um resumo (ex: Pessoa 1, Receita, Total: 500)
-        var totaisTransacoes = await _context.Transacoes
+        // 2. Busca as transações
+        var transacoes = await _context.Transacoes
             .AsNoTracking()
-            .GroupBy(t => new { t.PessoaId, t.Tipo })
-            .Select(g => new 
-            { 
-                PessoaId = g.Key.PessoaId, 
-                Tipo = g.Key.Tipo, 
-                Total = g.Sum(t => t.Valor) 
-            })
             .ToListAsync();
 
-        var relatorio = new RelatorioTotaisDto();
-
-        // 3. Monta o relatório final na memória unindo as duas informações rápidas
-        foreach (var p in pessoas)
+        // 3. O C# faz o cálculo de forma super rápida e segura
+        var relatorioPessoas = pessoas.Select(p => 
         {
-            var receitas = totaisTransacoes
+            var receitas = transacoes
                 .Where(t => t.PessoaId == p.Id && t.Tipo == TipoTransacao.Receita)
-                .Sum(t => t.Total);
+                .Sum(t => t.Valor);
                 
-            var despesas = totaisTransacoes
+            var despesas = transacoes
                 .Where(t => t.PessoaId == p.Id && t.Tipo == TipoTransacao.Despesa)
-                .Sum(t => t.Total);
+                .Sum(t => t.Valor);
 
-            relatorio.Pessoas.Add(new TotaisPessoaDto
+            return new TotaisPessoaDto
             {
                 Nome = p.Nome,
                 Receitas = receitas,
                 Despesas = despesas,
                 Saldo = receitas - despesas
-            });
-        }
+            };
+        }).ToList();
 
-        // 4. Calcula os totais gerais do sistema
-        relatorio.TotalReceitas = relatorio.Pessoas.Sum(p => p.Receitas);
-        relatorio.TotalDespesas = relatorio.Pessoas.Sum(p => p.Despesas);
-        relatorio.SaldoLiquido = relatorio.TotalReceitas - relatorio.TotalDespesas;
+        // 4. Monta o objeto final sem risco de listas nulas
+        var relatorio = new RelatorioTotaisDto
+        {
+            Pessoas = relatorioPessoas,
+            TotalReceitas = relatorioPessoas.Sum(p => p.Receitas),
+            TotalDespesas = relatorioPessoas.Sum(p => p.Despesas),
+            SaldoLiquido = relatorioPessoas.Sum(p => p.Receitas) - relatorioPessoas.Sum(p => p.Despesas)
+        };
 
         return Ok(relatorio);
     }
