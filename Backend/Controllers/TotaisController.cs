@@ -26,17 +26,17 @@ public class TotaisController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> Get()
     {
-        // Delega o cálculo (SUM) para o motor do banco de dados (SQLite/SQL Server).
-        // A API recebe apenas o resultado final (poucos bytes), poupando RAM e CPU do servidor.
+        // O SQLite prefere a sintaxe de condição ternária ( ? : ).
+        // Isso é convertido de forma extremamente eficiente para um "SUM(CASE WHEN...)" em SQL.
         var relatorioPessoas = await _context.Pessoas
             .AsNoTracking()
             .Select(p => new TotaisPessoaDto
             {
                 Nome = p.Nome,
-                Receitas = p.Transacoes.Where(t => t.Tipo == TipoTransacao.Receita).Sum(t => (decimal?)t.Valor) ?? 0,
-                Despesas = p.Transacoes.Where(t => t.Tipo == TipoTransacao.Despesa).Sum(t => (decimal?)t.Valor) ?? 0,
-                Saldo = (p.Transacoes.Where(t => t.Tipo == TipoTransacao.Receita).Sum(t => (decimal?)t.Valor) ?? 0) - 
-                        (p.Transacoes.Where(t => t.Tipo == TipoTransacao.Despesa).Sum(t => (decimal?)t.Valor) ?? 0)
+                Receitas = p.Transacoes.Sum(t => t.Tipo == TipoTransacao.Receita ? t.Valor : 0),
+                Despesas = p.Transacoes.Sum(t => t.Tipo == TipoTransacao.Despesa ? t.Valor : 0),
+                Saldo = p.Transacoes.Sum(t => t.Tipo == TipoTransacao.Receita ? t.Valor : 0) - 
+                        p.Transacoes.Sum(t => t.Tipo == TipoTransacao.Despesa ? t.Valor : 0)
             })
             .OrderBy(p => p.Nome)
             .ToListAsync();
