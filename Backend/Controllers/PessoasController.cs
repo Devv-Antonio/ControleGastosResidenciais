@@ -21,19 +21,34 @@ public class PessoasController : ControllerBase
     }
 
     /// <summary>
-    /// Lista todas as pessoas cadastradas de forma ordenada.
+    /// Lista as pessoas cadastradas com paginação e ordenação.
     /// </summary>
     [HttpGet]
-    public async Task<IActionResult> Get()
+    public async Task<IActionResult> Get([FromQuery] int page = 1, [FromQuery] int pageSize = 10)
     {
-        // AsNoTracking evita alocação desnecessária de memória.
-        // OrderBy garante uma experiência de UI previsível e organizada.
-        var pessoas = await _context.Pessoas
-            .AsNoTracking()
+        // 1. Prepara a consulta base
+        var query = _context.Pessoas.AsNoTracking();
+
+        // 2. Conta o total de registos no banco (antes de paginar)
+        var totalCount = await query.CountAsync();
+
+        // 3. Aplica a ordenação, salta os registos anteriores e pega o tamanho da página
+        var pessoas = await query
             .OrderBy(p => p.Nome)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
             .ToListAsync();
+
+        // 4. Monta o objeto de resposta padronizado
+        var resultado = new PagedResult<Pessoa>
+        {
+            Items = pessoas,
+            TotalCount = totalCount,
+            Page = page,
+            PageSize = pageSize
+        };
             
-        return Ok(pessoas);
+        return Ok(resultado);
     }
 
     /// <summary>
