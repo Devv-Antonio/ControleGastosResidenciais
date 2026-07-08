@@ -1,8 +1,8 @@
-import { useEffect, useState, FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { api } from '../services/api';
 
 interface Pessoa {
-  id: int;
+  id: number;
   nome: string;
   idade: number;
 }

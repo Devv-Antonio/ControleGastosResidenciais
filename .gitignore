@@ -1,0 +1,23 @@
+# --- FRONTEND (Node / React) ---
+node_modules/
+**/node_modules/
+dist/
+**/dist/
+*.local
+.eslintcache
+
+# --- BACKEND (.NET / C#) ---
+bin/
+obj/
+**/bin/
+**/obj/
+*.db
+*.db-journal
+*.pfx
+
+# --- IDE e Ferramentas ---
+.vscode/
+.idea/
+*.suo
+*.user
+*.sln.docstates
