@@ -35,18 +35,9 @@ public class TransacoesController : ControllerBase
     [HttpPost]
     public async Task<IActionResult> Post([FromBody] TransacaoCreateDto dto)
     {
-        try
-        {
-            var transacao = await _transacaoService.CriarAsync(dto);
-            return Created("", transacao); 
-        }
-        catch (ArgumentException ex)
-        {
-            return BadRequest(new { message = ex.Message });
-        }
-        catch (InvalidOperationException ex)
-        {
-            return BadRequest(new { message = ex.Message });
-        }
+        // O tratamento de exceções agora é feito globalmente pelo IExceptionHandler
+        var transacao = await _transacaoService.CriarAsync(dto);
+        
+        return Created("", transacao); 
     }
 }
