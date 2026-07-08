@@ -26,28 +26,28 @@ public class TotaisController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> Get()
     {
-        // O Include carrega as transações atreladas a cada pessoa direto do banco
-        var pessoas = await _context.Pessoas.Include(p => p.Transacoes).ToListAsync();
-
-        var relatorio = new RelatorioTotaisDto();
-
-        foreach (var pessoa in pessoas)
-        {
-            var receitas = pessoa.Transacoes.Where(t => t.Tipo == TipoTransacao.Receita).Sum(t => t.Valor);
-            var despesas = pessoa.Transacoes.Where(t => t.Tipo == TipoTransacao.Despesa).Sum(t => t.Valor);
-
-            relatorio.Pessoas.Add(new TotaisPessoaDto
+        // Delega o cálculo (SUM) para o motor do banco de dados (SQLite/SQL Server).
+        // A API recebe apenas o resultado final (poucos bytes), poupando RAM e CPU do servidor.
+        var relatorioPessoas = await _context.Pessoas
+            .AsNoTracking()
+            .Select(p => new TotaisPessoaDto
             {
-                Nome = pessoa.Nome,
-                Receitas = receitas,
-                Despesas = despesas,
-                Saldo = receitas - despesas
-            });
-        }
+                Nome = p.Nome,
+                Receitas = p.Transacoes.Where(t => t.Tipo == TipoTransacao.Receita).Sum(t => (decimal?)t.Valor) ?? 0,
+                Despesas = p.Transacoes.Where(t => t.Tipo == TipoTransacao.Despesa).Sum(t => (decimal?)t.Valor) ?? 0,
+                Saldo = (p.Transacoes.Where(t => t.Tipo == TipoTransacao.Receita).Sum(t => (decimal?)t.Valor) ?? 0) - 
+                        (p.Transacoes.Where(t => t.Tipo == TipoTransacao.Despesa).Sum(t => (decimal?)t.Valor) ?? 0)
+            })
+            .OrderBy(p => p.Nome)
+            .ToListAsync();
 
-        relatorio.TotalReceitas = relatorio.Pessoas.Sum(p => p.Receitas);
-        relatorio.TotalDespesas = relatorio.Pessoas.Sum(p => p.Despesas);
-        relatorio.SaldoLiquido = relatorio.TotalReceitas - relatorio.TotalDespesas;
+        var relatorio = new RelatorioTotaisDto
+        {
+            Pessoas = relatorioPessoas,
+            TotalReceitas = relatorioPessoas.Sum(p => p.Receitas),
+            TotalDespesas = relatorioPessoas.Sum(p => p.Despesas),
+            SaldoLiquido = relatorioPessoas.Sum(p => p.Receitas) - relatorioPessoas.Sum(p => p.Despesas)
+        };
 
         return Ok(relatorio);
     }

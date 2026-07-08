@@ -21,12 +21,18 @@ public class PessoasController : ControllerBase
     }
 
     /// <summary>
-    /// Lista todas as pessoas cadastradas no sistema.
+    /// Lista todas as pessoas cadastradas de forma ordenada.
     /// </summary>
     [HttpGet]
     public async Task<IActionResult> Get()
     {
-        var pessoas = await _context.Pessoas.ToListAsync();
+        // AsNoTracking evita alocação desnecessária de memória.
+        // OrderBy garante uma experiência de UI previsível e organizada.
+        var pessoas = await _context.Pessoas
+            .AsNoTracking()
+            .OrderBy(p => p.Nome)
+            .ToListAsync();
+            
         return Ok(pessoas);
     }
 
@@ -50,8 +56,6 @@ public class PessoasController : ControllerBase
     [HttpPost]
     public async Task<IActionResult> Post([FromBody] PessoaCreateDto dto)
     {
-        // O [ApiController] no topo da classe garante que se o DTO for inválido 
-        // (ex: nome vazio), ele já devolve um Erro 400 automaticamente.
         var pessoa = new Pessoa
         {
             Nome = dto.Nome,
@@ -61,7 +65,6 @@ public class PessoasController : ControllerBase
         _context.Pessoas.Add(pessoa);
         await _context.SaveChangesAsync();
 
-        // Retorna 201 Created e aponta para a rota de busca da pessoa recém-criada
         return CreatedAtAction(nameof(GetById), new { id = pessoa.Id }, pessoa);
     }
 
@@ -79,6 +82,6 @@ public class PessoasController : ControllerBase
         _context.Pessoas.Remove(pessoa);
         await _context.SaveChangesAsync();
 
-        return NoContent(); // Retorna 204 No Content, o padrão correto para deleções
+        return NoContent();
     }
 }

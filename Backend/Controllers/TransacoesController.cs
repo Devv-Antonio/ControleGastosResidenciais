@@ -14,7 +14,6 @@ public class TransacoesController : ControllerBase
 {
     private readonly ITransacaoService _transacaoService;
 
-    // Injeção de dependência do serviço
     public TransacoesController(ITransacaoService transacaoService)
     {
         _transacaoService = transacaoService;
@@ -39,18 +38,14 @@ public class TransacoesController : ControllerBase
         try
         {
             var transacao = await _transacaoService.CriarAsync(dto);
-            
-            // Retorna 201 Created informando que o recurso foi criado com sucesso
             return Created("", transacao); 
         }
         catch (ArgumentException ex)
         {
-            // Captura o erro de "Pessoa não existe"
             return BadRequest(new { message = ex.Message });
         }
         catch (InvalidOperationException ex)
         {
-            // Captura o erro de "Menor de idade com receita"
             return BadRequest(new { message = ex.Message });
         }
     }
