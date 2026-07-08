@@ -1,78 +1,128 @@
 import { useEffect, useState } from 'react';
 import { api } from '../services/api';
 
+// Tipagens baseadas no DTO profissional que criamos no Back-end
+interface TotaisPessoa {
+  nome: string;
+  receitas: number;
+  despesas: number;
+  saldo: number;
+}
+
 interface Relatorio {
-  pessoas: {
-    id: number;
-    nome: string;
-    totalReceitas: number;
-    totalDespesas: number;
-    saldo: number;
-  }[];
-  totalGeral: {
-    receitas: number;
-    despesas: number;
-    saldoLiquido: number;
-  };
+  pessoas: TotaisPessoa[];
+  totalReceitas: number;
+  totalDespesas: number;
+  saldoLiquido: number;
 }
 
 export default function Dashboard() {
   const [relatorio, setRelatorio] = useState<Relatorio | null>(null);
+  const [erro, setErro] = useState('');
 
   useEffect(() => {
     carregarTotais();
   }, []);
 
   async function carregarTotais() {
-    const response = await api.get('/totais');
-    setRelatorio(response.data);
+    try {
+      const response = await api.get('/totais');
+      setRelatorio(response.data);
+    } catch (error) {
+      setErro('Erro ao carregar o dashboard de totais.');
+    }
   }
 
-  if (!relatorio) return <p>Carregando totais...</p>;
+  // Função utilitária para deixar os números com formato de R$
+  function formatarMoeda(valor: number) {
+    return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(valor);
+  }
+
+  // Tela de loading elegante enquanto o back-end processa
+  if (!relatorio && !erro) {
+    return (
+      <div className="container" style={{ textAlign: 'center', marginTop: '3rem' }}>
+        <h2 style={{ color: 'var(--text-muted)' }}>Carregando métricas financeiras...</h2>
+      </div>
+    );
+  }
 
   return (
-    <div>
-      <h2>Consulta de Totais</h2>
+    <div className="container">
+      <h1 className="title">Dashboard Financeiro</h1>
+      
+      {erro && <div className="alert-error">{erro}</div>}
 
-      <h3>Totais por Pessoa</h3>
-      <table border={1} cellPadding={8} style={{ borderCollapse: 'collapse', width: '100%', marginBottom: '30px' }}>
-        <thead>
-          <tr>
-            <th>Nome</th>
-            <th>Total Receitas</th>
-            <th>Total Despesas</th>
-            <th>Saldo</th>
-          </tr>
-        </thead>
-        <tbody>
-          {relatorio.pessoas.map(p => (
-            <tr key={p.id}>
-              <td>{p.nome}</td>
-              <td style={{ color: 'green' }}>R$ {p.totalReceitas.toFixed(2)}</td>
-              <td style={{ color: 'red' }}>R$ {p.totalDespesas.toFixed(2)}</td>
-              <td style={{ fontWeight: 'bold' }}>R$ {p.saldo.toFixed(2)}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      {relatorio && (
+        <>
+          {/* Painéis Superiores (Cards de Resumo Geral) */}
+          <div style={{ display: 'flex', gap: '1rem', marginBottom: '2rem', flexWrap: 'wrap' }}>
+            
+            <div className="card" style={{ flex: 1, marginBottom: 0, borderTop: '4px solid var(--success-color)' }}>
+              <h3 style={{ fontSize: '1rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>Total de Receitas</h3>
+              <p style={{ fontSize: '1.75rem', fontWeight: 'bold', color: 'var(--success-color)' }}>
+                {formatarMoeda(relatorio.totalReceitas)}
+              </p>
+            </div>
+            
+            <div className="card" style={{ flex: 1, marginBottom: 0, borderTop: '4px solid var(--danger-color)' }}>
+              <h3 style={{ fontSize: '1rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>Total de Despesas</h3>
+              <p style={{ fontSize: '1.75rem', fontWeight: 'bold', color: 'var(--danger-color)' }}>
+                {formatarMoeda(relatorio.totalDespesas)}
+              </p>
+            </div>
+            
+            <div className="card" style={{ flex: 1, marginBottom: 0, borderTop: '4px solid var(--primary-color)' }}>
+              <h3 style={{ fontSize: '1rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>Saldo Líquido Geral</h3>
+              <p style={{ fontSize: '1.75rem', fontWeight: 'bold', color: 'var(--text-main)' }}>
+                {formatarMoeda(relatorio.saldoLiquido)}
+              </p>
+            </div>
 
-      <h3>Total Geral</h3>
-      <table border={1} cellPadding={8} style={{ borderCollapse: 'collapse', width: '100%' }}>
-        <tbody>
-          <tr>
-            <td><strong>Receitas Totais:</strong></td>
-            <td style={{ color: 'green' }}>R$ {relatorio.totalGeral.receitas.toFixed(2)}</td>
-          </tr>
-          <tr>
-            <td><strong>Despesas Totais:</strong></td>
-            <td style={{ color: 'red' }}>R$ {relatorio.totalGeral.despesas.toFixed(2)}</td>
-          </tr>
-          <tr>
-            <td><strong>Saldo Líquido:</strong></td>
-            <td style={{ fontWeight: 'bold' }}>R$ {relatorio.totalGeral.saldoLiquido.toFixed(2)}</td>
-          </tr>
-        </tbody>
-      </table>
+          </div>
+
+          {/* Tabela de Detalhamento por Pessoa */}
+          <div className="card">
+            <h2 style={{ fontSize: '1.25rem', marginBottom: '1rem', color: 'var(--text-main)' }}>
+              Detalhamento por Pessoa
+            </h2>
+            <div className="table-container">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Nome</th>
+                    <th>Receitas</th>
+                    <th>Despesas</th>
+                    <th>Saldo Individual</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {relatorio.pessoas.map((pessoa, index) => (
+                    <tr key={index}>
+                      <td style={{ fontWeight: 500 }}>{pessoa.nome}</td>
+                      <td style={{ color: 'var(--success-color)' }}>{formatarMoeda(pessoa.receitas)}</td>
+                      <td style={{ color: 'var(--danger-color)' }}>{formatarMoeda(pessoa.despesas)}</td>
+                      <td style={{ 
+                        fontWeight: 'bold', 
+                        color: pessoa.saldo >= 0 ? 'var(--success-color)' : 'var(--danger-color)' 
+                      }}>
+                        {formatarMoeda(pessoa.saldo)}
+                      </td>
+                    </tr>
+                  ))}
+                  {relatorio.pessoas.length === 0 && (
+                    <tr>
+                      <td colSpan={4} style={{ textAlign: 'center', color: 'var(--text-muted)' }}>
+                        Nenhuma movimentação para exibir.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }

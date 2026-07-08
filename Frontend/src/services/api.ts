@@ -1,5 +1,6 @@
 import axios from 'axios';
 
 export const api = axios.create({
-  baseURL: 'http://localhost:5054/api', 
+  // O Vite usa import.meta.env para ler o arquivo .env
+  baseURL: import.meta.env.VITE_API_URL, 
 });
