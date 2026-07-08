@@ -13,7 +13,6 @@ export default function Pessoas() {
   const [nome, setNome] = useState('');
   const [idade, setIdade] = useState('');
   
-  // Novos estados para UX (Experiência do Usuário)
   const [loading, setLoading] = useState(false);
   const [erro, setErro] = useState('');
 
@@ -24,7 +23,8 @@ export default function Pessoas() {
   async function carregarPessoas() {
     try {
       const response = await api.get('/pessoas');
-      setPessoas(response.data);
+      // Correção aplicada: acessando a propriedade .items devido à paginação
+      setPessoas(response.data.items);
     } catch (error) {
       setErro('Erro ao carregar a lista de pessoas.');
     }
@@ -32,7 +32,7 @@ export default function Pessoas() {
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
-    setErro(''); // Limpa erros anteriores
+    setErro('');
     setLoading(true);
 
     try {
@@ -41,7 +41,6 @@ export default function Pessoas() {
       setIdade('');
       await carregarPessoas();
     } catch (error: any) {
-      // Pega a mensagem de erro que vem do nosso Back-end profissional
       setErro(error.response?.data?.message || 'Erro ao cadastrar pessoa. Verifique os dados.');
     } finally {
       setLoading(false);
@@ -49,7 +48,6 @@ export default function Pessoas() {
   }
 
   async function handleDelete(id: number) {
-    // Alerta de confirmação exigido por boas práticas!
     if (!window.confirm('Tem certeza? Isso apagará TODAS as transações desta pessoa!')) {
       return; 
     }
@@ -66,7 +64,6 @@ export default function Pessoas() {
     <div className="container">
       <h1 className="title">Gestão de Pessoas</h1>
 
-      {/* Exibe o erro na tela se ele existir */}
       {erro && <div className="alert-error">{erro}</div>}
 
       <div className="card">
@@ -127,7 +124,6 @@ export default function Pessoas() {
                   </td>
                 </tr>
               ))}
-              {/* Mensagem amigável quando a tabela está vazia */}
               {pessoas.length === 0 && (
                 <tr>
                   <td colSpan={4} style={{ textAlign: 'center', color: 'var(--text-muted)' }}>

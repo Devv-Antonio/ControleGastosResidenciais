@@ -11,7 +11,7 @@ interface Transacao {
   id: number;
   descricao: string;
   valor: number;
-  tipo: number; // 0 = Despesa, 1 = Receita
+  tipo: number;
   pessoaId: number;
 }
 
@@ -21,7 +21,7 @@ export default function Transacoes() {
   
   const [descricao, setDescricao] = useState('');
   const [valor, setValor] = useState('');
-  const [tipo, setTipo] = useState('0'); // Começa como Despesa
+  const [tipo, setTipo] = useState('0');
   const [pessoaId, setPessoaId] = useState('');
 
   const [loading, setLoading] = useState(false);
@@ -33,12 +33,13 @@ export default function Transacoes() {
 
   async function carregarDados() {
     try {
-      // Faz as duas requisições ao mesmo tempo para a tela carregar mais rápido
       const [resPessoas, resTransacoes] = await Promise.all([
         api.get('/pessoas'),
         api.get('/transacoes')
       ]);
-      setPessoas(resPessoas.data);
+      
+      // Correção aplicada: acessando .items na resposta das pessoas
+      setPessoas(resPessoas.data.items);
       setTransacoes(resTransacoes.data);
     } catch (error) {
       setErro('Erro ao carregar os dados iniciais.');
@@ -66,10 +67,8 @@ export default function Transacoes() {
       
       setDescricao('');
       setValor('');
-      // Recarrega a lista de transações atualizada
       await carregarDados();
     } catch (error: any) {
-      // Aqui a mágica acontece: se o back-end barrar a idade, o erro aparece na tela!
       setErro(error.response?.data?.message || 'Erro ao cadastrar transação. Verifique os dados.');
     } finally {
       setLoading(false);
